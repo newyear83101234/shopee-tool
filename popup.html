@@ -74,6 +74,13 @@
           <div class="loading-spinner"></div>
           <p>AI 正在生成中，請稍候...</p>
         </div>
+        <div id="ai-error-panel" class="hidden" style="margin-top:10px;padding:10px;background:#fff3f3;border:1px solid #e74c3c;border-radius:6px;color:#c0392b;font-size:12px;line-height:1.5;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <strong>❌ 生成失敗</strong>
+            <button id="btn-close-ai-error" style="background:none;border:none;font-size:14px;cursor:pointer;color:#c0392b;">✕</button>
+          </div>
+          <div id="ai-error-content" style="word-break:break-word;white-space:pre-wrap;"></div>
+        </div>
       </div>
 
       <!-- 步驟三：填入 -->

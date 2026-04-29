@@ -227,6 +227,24 @@ function initCapture() {
 // ========== 步驟二：AI 生成標題 ==========
 function initAI() {
   document.getElementById('btn-ai-generate').addEventListener('click', generateTitles);
+  const closeErr = document.getElementById('btn-close-ai-error');
+  if (closeErr) closeErr.addEventListener('click', () => {
+    document.getElementById('ai-error-panel').classList.add('hidden');
+  });
+}
+
+function showAiError(msg) {
+  const panel = document.getElementById('ai-error-panel');
+  const content = document.getElementById('ai-error-content');
+  if (panel && content) {
+    content.textContent = msg;
+    panel.classList.remove('hidden');
+  }
+}
+
+function hideAiError() {
+  const panel = document.getElementById('ai-error-panel');
+  if (panel) panel.classList.add('hidden');
 }
 
 async function generateTitles() {
@@ -235,7 +253,12 @@ async function generateTitles() {
   let model = settings?.ai_model || 'gemini-2.5-flash';
   if (model === 'gemini-2.5-pro-preview-05-06') model = 'gemini-2.5-pro';
 
-  if (!apiKey) { showToast('請先在設定中填入 Gemini API Key', 'error'); return; }
+  if (!apiKey) {
+    showToast('請先在設定中填入 Gemini API Key', 'error');
+    showAiError('請先打開設定 ⚙️ 填入 Gemini API Key（去 https://aistudio.google.com/apikey 申請，免費）');
+    return;
+  }
+  hideAiError();
 
   let originalTitle = document.getElementById('title-0').value.trim();
   let description = '';
@@ -246,7 +269,11 @@ async function generateTitles() {
     description = product?.description || '';
   }
 
-  if (!originalTitle) { showToast('請先擷取商品資料（步驟 1）', 'error'); return; }
+  if (!originalTitle) {
+    showToast('請先擷取商品資料（步驟 1）', 'error');
+    showAiError('請先在步驟 1 擷取商品資料，AI 才有原始標題可以生成變化版本');
+    return;
+  }
 
   const style = document.getElementById('ai-style').value;
   const extra = document.getElementById('ai-extra-prompt').value.trim();
@@ -360,6 +387,7 @@ ${extra ? `額外要求：${extra}` : ''}
 
   } catch (err) {
     showToast(`生成失敗：${err.message}`, 'error');
+    showAiError(`生成失敗：${err.message}\n\n常見原因：\n• API Key 過期或被撤銷 → 重新申請\n• Gemini 免費額度已用完 → 等明天\n• 模型名稱錯誤 → 設定裡選 Gemini 2.5 Flash\n• 網路問題 → 重試`);
     console.error('AI error:', err);
   } finally {
     document.getElementById('ai-loading').classList.add('hidden');
