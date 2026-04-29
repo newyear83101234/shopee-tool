@@ -117,10 +117,14 @@ async function loadSharedData() {
     statusEl.classList.remove('hidden');
   }
 
-  // 載入標題
+  // 載入標題（但要驗證 titles[0] 是否跟目前商品對得上，否則視為過期忽略）
   const titles = await sharedLoad('load_titles', 'generated_titles');
-  if (titles && titles.length > 0) {
+  const currentName = product?.name?.trim() || '';
+  if (titles && titles.length > 0 && titles[0] && currentName && titles[0].trim() === currentName) {
     displayTitles(titles);
+  } else if (titles && titles.length > 0 && currentName && titles[0]?.trim() !== currentName) {
+    console.warn('[蝦皮助手] 偵測到舊 AI 標題（與目前商品不符），自動清除');
+    await sharedSave('save_titles', 'generated_titles', []);
   }
 }
 
@@ -211,11 +215,23 @@ function initCapture() {
       capturedData.capturedAt = new Date().toLocaleString('zh-TW');
       await sharedSave('save_product', 'captured_product', capturedData);
 
+      // 擷取新商品 → 清掉舊的 AI 標題（避免舊標題污染下次生成）
+      await sharedSave('save_titles', 'generated_titles', []);
+      // 同步清掉 UI 上的標題
+      for (let i = 1; i <= 4; i++) {
+        const input = document.getElementById(`title-${i}`);
+        if (input) { input.value = ''; updateCharCount(i); }
+      }
+      document.getElementById('no-titles-msg')?.classList.remove('hidden');
+      document.getElementById('titles-list')?.classList.add('hidden');
+      document.getElementById('btn-save-titles')?.classList.add('hidden');
+      hideAiError();
+
       statusEl.className = 'status-msg success';
       statusEl.textContent = `✅ 擷取成功！商品名稱：${capturedData.name || '(空)'}`;
       document.getElementById('title-0').value = capturedData.name || '';
       updateDataView(capturedData);
-      showToast('商品資料已擷取並儲存！', 'success');
+      showToast('商品資料已擷取並儲存！舊標題已清除', 'success');
 
     } catch (err) {
       statusEl.className = 'status-msg error';
@@ -260,14 +276,14 @@ async function generateTitles() {
   }
   hideAiError();
 
-  let originalTitle = document.getElementById('title-0').value.trim();
-  let description = '';
+  // 永遠以擷取的商品為準（title-0 input 可能被舊 generated_titles 污染）
+  const product = await sharedLoad('load_product', 'captured_product');
+  let originalTitle = (product?.name || '').trim();
+  let description = product?.description || '';
 
-  if (!originalTitle) {
-    const product = await sharedLoad('load_product', 'captured_product');
-    originalTitle = product?.name || '';
-    description = product?.description || '';
-  }
+  // 順手把 title-0 input 矯正成正確值
+  const t0 = document.getElementById('title-0');
+  if (t0 && originalTitle) t0.value = originalTitle;
 
   if (!originalTitle) {
     showToast('請先擷取商品資料（步驟 1）', 'error');
