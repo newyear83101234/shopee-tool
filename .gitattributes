@@ -1,0 +1,7 @@
+# BAT 檔強制 CRLF（CMD 不認得 LF）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+# Python script 用 LF 比較通用
+*.py text eol=lf
+# 其他文字檔自動處理
+* text=auto
