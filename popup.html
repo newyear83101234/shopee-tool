@@ -248,6 +248,18 @@
               <option value="gemini-2.5-pro">Gemini 2.5 Pro（品質最好）</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="title-prefix">標題前綴（4 組標題都會以此開頭）</label>
+            <input type="text" id="title-prefix" placeholder="🔥隔日到貨🔥" value="🔥隔日到貨🔥">
+            <small class="hint">留空 = 不加前綴；會自動接在主商品名前面</small>
+          </div>
+          <div class="form-group">
+            <label for="title-strategy">標題生成策略</label>
+            <select id="title-strategy">
+              <option value="reorder">重排既有關鍵字（推薦，避免蝦皮重複偵測）</option>
+              <option value="creative">自由創作（會加入新詞、可能改變風格）</option>
+            </select>
+          </div>
           <hr style="margin: 16px 0; border: none; border-top: 1px solid #eee;">
           <h3 style="font-size:13px; margin-bottom:10px;">帳號名稱</h3>
           <div class="form-group">

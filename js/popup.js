@@ -150,6 +150,8 @@ function initSettings() {
     if (settings) {
       if (settings.gemini_api_key) document.getElementById('api-key').value = settings.gemini_api_key;
       if (settings.ai_model) document.getElementById('ai-model').value = settings.ai_model;
+      if (typeof settings.title_prefix === 'string') document.getElementById('title-prefix').value = settings.title_prefix;
+      if (settings.title_strategy) document.getElementById('title-strategy').value = settings.title_strategy;
       const names = settings.account_names || [];
       document.querySelectorAll('.account-name-input').forEach(input => {
         const i = parseInt(input.dataset.index);
@@ -168,13 +170,21 @@ function initSettings() {
   document.getElementById('btn-save-settings').addEventListener('click', async () => {
     const key = document.getElementById('api-key').value.trim();
     const model = document.getElementById('ai-model').value;
+    const titlePrefix = document.getElementById('title-prefix').value;
+    const titleStrategy = document.getElementById('title-strategy').value;
     const names = [];
     document.querySelectorAll('.account-name-input').forEach(input => {
       names[parseInt(input.dataset.index)] = input.value.trim();
     });
     if (!key) { showToast('請輸入 API Key', 'error'); return; }
 
-    const settings = { gemini_api_key: key, ai_model: model, account_names: names };
+    const settings = {
+      gemini_api_key: key,
+      ai_model: model,
+      title_prefix: titlePrefix,
+      title_strategy: titleStrategy,
+      account_names: names
+    };
     await sharedSave('save_settings', 'settings', settings);
     showToast('設定已儲存！', 'success');
     modal.classList.add('hidden');
@@ -293,37 +303,72 @@ async function generateTitles() {
 
   const style = document.getElementById('ai-style').value;
   const extra = document.getElementById('ai-extra-prompt').value.trim();
+  const titlePrefix = (settings?.title_prefix ?? '🔥隔日到貨🔥');
+  const titleStrategy = settings?.title_strategy || 'reorder';
 
   document.getElementById('ai-loading').classList.remove('hidden');
   document.getElementById('btn-ai-generate').disabled = true;
 
-  const styleMap = {
-    standard: '標準電商風格，簡潔明瞭，突出關鍵字和賣點',
-    emotional: '情感訴求型，打動消費者，強調使用場景',
-    professional: '專業規格型，強調參數和品質',
-    youth: '年輕活潑型，使用流行語和口語化表達',
-    luxury: '高端質感型，用字精煉，營造高級感'
-  };
+  // 把原始標題裡的前綴剝掉（如果開頭就是 titlePrefix 或常見 emoji 包裝）
+  let coreTitle = originalTitle;
+  if (titlePrefix && coreTitle.startsWith(titlePrefix)) {
+    coreTitle = coreTitle.substring(titlePrefix.length).trim();
+  } else {
+    // 偵測常見的 emoji 包裝開頭，如 🔥xxx🔥
+    const emojiPrefixMatch = coreTitle.match(/^([\p{Emoji_Presentation}\p{Extended_Pictographic}].{1,15}?[\p{Emoji_Presentation}\p{Extended_Pictographic}])(.*)$/u);
+    if (emojiPrefixMatch) coreTitle = emojiPrefixMatch[2].trim();
+  }
 
-  const prompt = `你是台灣蝦皮電商的商品標題專家。
+  let prompt;
+  if (titleStrategy === 'reorder') {
+    // 重排策略：保留所有關鍵字，只打亂順序
+    prompt = `你是台灣蝦皮電商的標題排版助手。任務：根據既有商品標題的關鍵字，產生 4 組重新排列的變化版本。
+
+原始商品標題（去除前綴後）：「${coreTitle}」
+固定前綴（4 組標題都必須以此開頭）：「${titlePrefix}」
+${extra ? `額外要求：${extra}` : ''}
+
+【嚴格規則】
+1. 4 組標題必須以「${titlePrefix}」開頭，緊接主商品名（原標題的第一個關鍵字組，例如「雙頭彩色馬克筆」）
+2. 必須保留原始標題中的「全部」關鍵字，一個都不可遺漏
+3. 不可新增原標題沒有的詞（不要加「現貨」「限時」「促銷」「免運」等促銷詞，除非原標題就有）
+4. 不可改字、不可換同義詞（例如「麥克筆」不可改成「彩色筆」、「油性筆」不可改成「油性墨水筆」）
+5. 4 組標題之間「關鍵字的排列順序必須明顯不同」，避免被蝦皮判定為重複上架
+6. 每個版本字數盡量接近原始標題長度
+7. 關鍵字之間用單一空格分隔
+
+【範例輸出格式】
+["${titlePrefix}雙頭彩色馬克筆 油性奇異筆 簽字筆 馬克筆 麥克筆 油性筆 彩色簽字筆 雙頭馬克筆 記號筆 快乾油性筆 文具", "${titlePrefix}雙頭彩色馬克筆 簽字筆 油性筆 雙頭馬克筆 快乾油性筆 油性奇異筆 文具 馬克筆 麥克筆 記號筆 彩色簽字筆", "...", "..."]
+
+只回 JSON 陣列，不要任何其他文字、不要 markdown 包裝、不要說明。直接回 [`;
+  } else {
+    // 自由創作策略（保留原本的風格化做法）
+    const styleMap = {
+      standard: '標準電商風格，簡潔明瞭，突出關鍵字和賣點',
+      emotional: '情感訴求型，打動消費者，強調使用場景',
+      professional: '專業規格型，強調參數和品質',
+      youth: '年輕活潑型，使用流行語和口語化表達',
+      luxury: '高端質感型，用字精煉，營造高級感'
+    };
+    prompt = `你是台灣蝦皮電商的商品標題專家。
 
 原始商品標題：「${originalTitle}」
+固定前綴（4 組標題都必須以此開頭）：「${titlePrefix}」
 ${description ? `商品描述重點：${(typeof description === 'string' ? description : description.text || '').substring(0, 300)}` : ''}
 ${extra ? `額外要求：${extra}` : ''}
 
-請根據以上資訊，生成 4 組完全不同的商品標題，用於 4 個不同的蝦皮賣場。
+請生成 4 組商品標題，用於 4 個不同的蝦皮賣場。
 
-核心要求：
-- 每個標題都必須明顯不同，用字和排列方式要有差異，避免被蝦皮偵測為重複上架
-- 以「高搜尋率、高點擊率、容易被搜尋到」為最優先
-- 蝦皮標題字數需介於 25~100 字之間（含空格和符號）
-- 要包含原始標題中的核心關鍵字，但順序和搭配方式不同
+要求：
+- 4 組標題必須以「${titlePrefix}」開頭
+- 每組標題字數介於 60~100 字
+- 包含原標題的核心關鍵字（商品主名）
+- 4 組必須明顯不同，避免被蝦皮偵測為重複上架
 - 風格：${styleMap[style]}
 - 使用繁體中文
 
-你必須只回覆一個 JSON 陣列，不要加任何其他文字、不要加 markdown 標記、不要加說明。
-格式範例：["標題一", "標題二", "標題三", "標題四"]
-注意：每個標題都是完整的字串，不要有換行。直接回覆 JSON 陣列即可。`;
+只回 JSON 陣列，格式：["標題一","標題二","標題三","標題四"]，不要任何其他文字。`;
+  }
 
   try {
     // 呼叫 Gemini API；Pro 過載時自動 fallback 到 Flash
