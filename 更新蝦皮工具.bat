@@ -44,14 +44,16 @@ echo     - Antivirus blocking the copy
 goto :error
 
 :showver
-for /f "tokens=2 delims=:," %%a in ('findstr /c:"\"version\"" "%TARGET_DIR%\manifest.json"') do set "VERSION=%%a"
-set "VERSION=%VERSION:"=%"
-set "VERSION=%VERSION: =%"
+REM 用 PowerShell 解析 JSON，比 findstr 穩（避免抓到 manifest_version 那行）
+REM 不用 pipe `|`，改用變數鏈避開 BAT 的 escape 問題
+for /f "usebackq delims=" %%v in (`powershell -NoProfile -Command "$m=Get-Content '%TARGET_DIR%\manifest.json' -Raw -Encoding UTF8; $j=ConvertFrom-Json $m; $j.version"`) do set "VERSION=%%v"
 echo   [INFO] Updated to version: v%VERSION%
 
 echo.
 echo [4/4] Opening Chrome extensions page...
-start "" "chrome://extensions/"
+REM 直接用 chrome.exe 開（避免 chrome:// 走到 Edge 等其他瀏覽器）
+start "" chrome "chrome://extensions/" 2>nul
+if errorlevel 1 start "" "chrome://extensions/"
 
 echo.
 powershell -NoProfile -Command "[Console]::OutputEncoding=[Text.Encoding]::UTF8; Write-Host ''; Write-Host '========================================' -ForegroundColor Green; Write-Host '   更新完成！請完成最後兩步：' -ForegroundColor Green; Write-Host '========================================' -ForegroundColor Green; Write-Host ''; Write-Host '  1. 在 Chrome 擴充功能頁面，找到「蝦皮快速上架助手」' -ForegroundColor Yellow; Write-Host '     點該卡片右下角的「重新整理」圖示（圓形箭頭）' -ForegroundColor Yellow; Write-Host ''; Write-Host '  2. 把蝦皮賣家中心已開啟的分頁，按 F5 重新整理' -ForegroundColor Yellow; Write-Host ''; Write-Host '========================================' -ForegroundColor Green"
