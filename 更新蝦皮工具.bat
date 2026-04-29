@@ -24,20 +24,30 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "[Console]::OutputEncodin
 if errorlevel 1 goto :error
 
 echo.
-echo [3/4] Copying files to %TARGET_DIR% (preserving Native Host config)...
+echo [3/4] Copying files to %TARGET_DIR%...
+echo   NOTE: If files are locked, please close Chrome first.
 if not exist "%TARGET_DIR%" mkdir "%TARGET_DIR%"
-robocopy "%TEMP_EXTRACT%" "%TARGET_DIR%" /E /XF "com.shopee.helper.json" /NDL /NJH /NJS /NP /R:2 /W:1 >nul
-if %errorlevel% GEQ 8 (
-    echo   [ERROR] File copy failed (robocopy exit code %errorlevel%)
-    goto :error
-)
-echo   [OK] Files updated
+robocopy "%TEMP_EXTRACT%" "%TARGET_DIR%" /E /XF "com.shopee.helper.json" /NDL /NJH /NJS /NP /R:5 /W:2
+set "RC=%ERRORLEVEL%"
+echo   robocopy exit code: %RC%
+if %RC% GEQ 8 goto :copyerr
+echo   [OK] Files updated successfully
+goto :showver
 
-REM Show version
+:copyerr
+echo.
+echo   [ERROR] robocopy failed with exit code %RC%
+echo   Common causes:
+echo     - Chrome is running and holding extension files (close Chrome and retry)
+echo     - D:\shopee-tool needs admin permission (run BAT as administrator)
+echo     - Antivirus blocking the copy
+goto :error
+
+:showver
 for /f "tokens=2 delims=:," %%a in ('findstr /c:"\"version\"" "%TARGET_DIR%\manifest.json"') do set "VERSION=%%a"
 set "VERSION=%VERSION:"=%"
 set "VERSION=%VERSION: =%"
-echo   [INFO] Updated to: v%VERSION%
+echo   [INFO] Updated to version: v%VERSION%
 
 echo.
 echo [4/4] Opening Chrome extensions page...
@@ -57,8 +67,10 @@ exit /b 0
 :error
 echo.
 echo ========================================
-echo   UPDATE FAILED - Please contact admin
+echo   UPDATE FAILED
 echo ========================================
+echo.
+echo Please screenshot the FULL window above and send to admin.
 echo.
 echo Press any key to close...
 pause >nul
