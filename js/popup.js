@@ -310,27 +310,46 @@ ${extra ? `額外要求：${extra}` : ''}
 注意：每個標題都是完整的字串，不要有換行。直接回覆 JSON 陣列即可。`;
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    // 呼叫 Gemini API；Pro 過載時自動 fallback 到 Flash
+    const callGemini = async (modelName) => {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.9,
+            maxOutputTokens: 2048,
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        const msg = errData.error?.message || `API 錯誤 ${resp.status}`;
+        const err = new Error(msg);
+        err.status = resp.status;
+        err.isOverload = resp.status === 503 || resp.status === 429 ||
+                          /overload|high demand|busy|unavailable/i.test(msg);
+        throw err;
+      }
+      return resp.json();
+    };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.9,
-          maxOutputTokens: 2048,
-          responseMimeType: 'application/json'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      throw new Error(errData.error?.message || `API 錯誤 ${response.status}`);
+    let data;
+    try {
+      data = await callGemini(model);
+    } catch (err1) {
+      // Pro 過載 → 自動換 Flash 重試
+      if (err1.isOverload && model !== 'gemini-2.5-flash') {
+        console.warn('[蝦皮助手] Pro 過載，自動切到 Flash 重試:', err1.message);
+        showToast('Pro 模型忙碌中，自動切到 Flash...', 'info');
+        data = await callGemini('gemini-2.5-flash');
+      } else {
+        throw err1;
+      }
     }
-
-    const data = await response.json();
     let content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('[蝦皮助手] AI 原始回傳:', content);
 
