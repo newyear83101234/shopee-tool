@@ -149,7 +149,8 @@ function initSettings() {
     const settings = await sharedLoad('load_settings', 'settings');
     if (settings) {
       if (settings.gemini_api_key) document.getElementById('api-key').value = settings.gemini_api_key;
-      if (settings.ai_model) document.getElementById('ai-model').value = settings.ai_model;
+      // 強制顯示 Flash（即使舊設定存的是 Pro 也忽略）
+      document.getElementById('ai-model').value = 'gemini-2.5-flash';
       if (typeof settings.title_prefix === 'string') document.getElementById('title-prefix').value = settings.title_prefix;
       if (settings.title_strategy) document.getElementById('title-strategy').value = settings.title_strategy;
       const names = settings.account_names || [];
@@ -178,9 +179,10 @@ function initSettings() {
     });
     if (!key) { showToast('請輸入 API Key', 'error'); return; }
 
+    // 強制鎖定 Flash，無論 select 顯示什麼都存 Flash
     const settings = {
       gemini_api_key: key,
-      ai_model: model,
+      ai_model: 'gemini-2.5-flash',
       title_prefix: titlePrefix,
       title_strategy: titleStrategy,
       account_names: names
@@ -276,8 +278,8 @@ function hideAiError() {
 async function generateTitles() {
   const settings = await sharedLoad('load_settings', 'settings');
   let apiKey = settings?.gemini_api_key || '';
-  let model = settings?.ai_model || 'gemini-2.5-flash';
-  if (model === 'gemini-2.5-pro-preview-05-06') model = 'gemini-2.5-pro';
+  // 強制鎖定 Flash 模型（成本控管：避免員工誤選 Pro 把帳單刷爆）
+  let model = 'gemini-2.5-flash';
 
   if (!apiKey) {
     showToast('請先在設定中填入 Gemini API Key', 'error');
@@ -398,19 +400,8 @@ ${extra ? `額外要求：${extra}` : ''}
       return resp.json();
     };
 
-    let data;
-    try {
-      data = await callGemini(model);
-    } catch (err1) {
-      // Pro 過載 → 自動換 Flash 重試
-      if (err1.isOverload && model !== 'gemini-2.5-flash') {
-        console.warn('[蝦皮助手] Pro 過載，自動切到 Flash 重試:', err1.message);
-        showToast('Pro 模型忙碌中，自動切到 Flash...', 'info');
-        data = await callGemini('gemini-2.5-flash');
-      } else {
-        throw err1;
-      }
-    }
+    // 強制 Flash，所以不需要 fallback 邏輯
+    const data = await callGemini(model);
     let content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     console.log('[蝦皮助手] AI 原始回傳:', content);
 
