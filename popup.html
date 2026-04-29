@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蝦皮快速上架助手</title>
+  <link rel="stylesheet" href="css/popup.css">
+</head>
+<body>
+  <div id="app">
+    <!-- ===== 頂部 ===== -->
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">🦐</span>
+        <h1>蝦皮快速上架助手</h1>
+        <span id="version-badge" style="margin-left:6px;padding:2px 6px;background:#eee;border-radius:4px;font-size:11px;color:#555;font-weight:500;">v—</span>
+      </div>
+      <div class="header-right">
+        <button id="btn-settings" class="icon-btn" title="設定">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Native Host 未連線提示 -->
+    <div id="native-error" class="native-error hidden">
+      ⚠️ 本機橋接未連線，跨帳號共享停用中。請執行「install.bat」並重啟 Chrome。
+    </div>
+
+    <!-- ===== 頁籤 ===== -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="main">🚀 擷取 / 填入</button>
+      <button class="tab" data-tab="titles">📝 標題管理</button>
+      <button class="tab" data-tab="data">📦 已擷取資料</button>
+    </nav>
+
+    <!-- ===== 主頁：擷取 & 填入 ===== -->
+    <section id="tab-main" class="tab-content active">
+      
+      <!-- 步驟一：擷取 -->
+      <div class="section-card">
+        <div class="step-badge">步驟 1</div>
+        <h2 class="section-title">從 A 帳號擷取商品資料</h2>
+        <p class="section-desc">在 A 帳號的蝦皮商品頁（新增或編輯），點擊下方按鈕擷取所有文字欄位。安裝本機橋接後，資料會同步到 D:\shopee-data，所有 Chrome 帳號都能讀取。</p>
+        <button id="btn-capture" class="btn btn-primary btn-lg btn-full">
+          📥 擷取目前頁面的商品資料
+        </button>
+        <div id="capture-status" class="status-msg hidden"></div>
+      </div>
+
+      <!-- 步驟二：AI 生成標題 -->
+      <div class="section-card">
+        <div class="step-badge">步驟 2</div>
+        <h2 class="section-title">AI 生成不同標題</h2>
+        <p class="section-desc">根據擷取到的商品名稱，AI 自動產生 4 組不同標題給 B~E 帳號。</p>
+        
+        <div class="form-group">
+          <label for="ai-style">生成風格</label>
+          <select id="ai-style">
+            <option value="standard">標準電商風格</option>
+            <option value="emotional">情感訴求型</option>
+            <option value="professional">專業規格型</option>
+            <option value="youth">年輕活潑型</option>
+            <option value="luxury">高端質感型</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ai-extra-prompt">額外指示（選填）</label>
+          <input type="text" id="ai-extra-prompt" placeholder="例如：標題要包含「免運」">
+        </div>
+        
+        <button id="btn-ai-generate" class="btn btn-accent btn-lg btn-full">
+          🤖 生成 4 組不同標題
+        </button>
+        <div id="ai-loading" class="hidden">
+          <div class="loading-spinner"></div>
+          <p>AI 正在生成中，請稍候...</p>
+        </div>
+      </div>
+
+      <!-- 步驟三：填入 -->
+      <div class="section-card">
+        <div class="step-badge">步驟 3</div>
+        <h2 class="section-title">填入到其他帳號</h2>
+        <p class="section-desc">切換到 B~E 帳號的 Chrome，開啟蝦皮「新增商品」頁面，選帳號後一鍵填入。</p>
+
+        <div class="account-fill-list">
+          <div class="account-fill-item">
+            <span class="account-dot" style="background:#FF6B35;"></span>
+            <span class="account-fill-name" data-index="0">A 帳號（原始）</span>
+            <span class="account-fill-tag">來源</span>
+          </div>
+          <div class="account-fill-item">
+            <span class="account-dot" style="background:#00A67E;"></span>
+            <span class="account-fill-name" data-index="1">B 帳號</span>
+            <button class="btn btn-primary btn-sm btn-fill-account" data-index="1">⚡ 填入</button>
+          </div>
+          <div class="account-fill-item">
+            <span class="account-dot" style="background:#4A90D9;"></span>
+            <span class="account-fill-name" data-index="2">C 帳號</span>
+            <button class="btn btn-primary btn-sm btn-fill-account" data-index="2">⚡ 填入</button>
+          </div>
+          <div class="account-fill-item">
+            <span class="account-dot" style="background:#9B59B6;"></span>
+            <span class="account-fill-name" data-index="3">D 帳號</span>
+            <button class="btn btn-primary btn-sm btn-fill-account" data-index="3">⚡ 填入</button>
+          </div>
+          <div class="account-fill-item">
+            <span class="account-dot" style="background:#E74C3C;"></span>
+            <span class="account-fill-name" data-index="4">E 帳號</span>
+            <button class="btn btn-primary btn-sm btn-fill-account" data-index="4">⚡ 填入</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 標題管理頁 ===== -->
+    <section id="tab-titles" class="tab-content">
+      <div class="section-card">
+        <h2 class="section-title">各帳號標題</h2>
+        <p class="section-desc">AI 生成後可以在這裡修改每個帳號的標題。填入時會使用這裡的標題。</p>
+        
+        <div id="no-titles-msg" class="empty-state">
+          <p>📝 尚未生成標題</p>
+          <small>請先完成步驟 1 和步驟 2</small>
+        </div>
+
+        <div id="titles-list" class="hidden">
+          <div class="title-edit-item">
+            <div class="title-edit-header">
+              <span class="account-dot" style="background:#FF6B35;"></span>
+              <span class="title-edit-label">A 帳號（原始標題）</span>
+            </div>
+            <input type="text" id="title-0" class="title-input" readonly>
+          </div>
+          <div class="title-edit-item">
+            <div class="title-edit-header">
+              <span class="account-dot" style="background:#00A67E;"></span>
+              <span class="title-edit-label">B 帳號</span>
+              <span class="char-count" data-for="title-1"></span>
+            </div>
+            <input type="text" id="title-1" class="title-input">
+          </div>
+          <div class="title-edit-item">
+            <div class="title-edit-header">
+              <span class="account-dot" style="background:#4A90D9;"></span>
+              <span class="title-edit-label">C 帳號</span>
+              <span class="char-count" data-for="title-2"></span>
+            </div>
+            <input type="text" id="title-2" class="title-input">
+          </div>
+          <div class="title-edit-item">
+            <div class="title-edit-header">
+              <span class="account-dot" style="background:#9B59B6;"></span>
+              <span class="title-edit-label">D 帳號</span>
+              <span class="char-count" data-for="title-3"></span>
+            </div>
+            <input type="text" id="title-3" class="title-input">
+          </div>
+          <div class="title-edit-item">
+            <div class="title-edit-header">
+              <span class="account-dot" style="background:#E74C3C;"></span>
+              <span class="title-edit-label">E 帳號</span>
+              <span class="char-count" data-for="title-4"></span>
+            </div>
+            <input type="text" id="title-4" class="title-input">
+          </div>
+        </div>
+
+        <button id="btn-save-titles" class="btn btn-primary btn-full hidden" style="margin-top:12px;">
+          💾 儲存標題修改
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== 已擷取資料頁 ===== -->
+    <section id="tab-data" class="tab-content">
+      <div class="section-card">
+        <h2 class="section-title">已擷取的商品資料</h2>
+        <p class="section-desc">顯示從 A 帳號擷取到的所有欄位。資料存放於 D:\shopee-data。</p>
+        
+        <div id="no-data-msg" class="empty-state">
+          <p>📦 尚未擷取任何資料</p>
+          <small>請先完成步驟 1</small>
+        </div>
+
+        <div id="captured-data" class="hidden">
+          <div class="data-field">
+            <label>商品名稱</label>
+            <div class="data-value" id="data-name">-</div>
+          </div>
+          <div class="data-field">
+            <label>商品分類</label>
+            <div class="data-value" id="data-category">-</div>
+          </div>
+          <div class="data-field">
+            <label>商品描述（前 200 字）</label>
+            <div class="data-value data-value-long" id="data-desc">-</div>
+          </div>
+          <div class="data-field">
+            <label>規格款式</label>
+            <div class="data-value" id="data-variations">-</div>
+          </div>
+          <div class="data-field">
+            <label>價格 / 庫存</label>
+            <div class="data-value" id="data-price">-</div>
+          </div>
+          <div class="data-field">
+            <label>物流設定</label>
+            <div class="data-value data-value-long" id="data-logistics">-</div>
+          </div>
+          <div class="data-field">
+            <label>擷取時間</label>
+            <div class="data-value" id="data-time">-</div>
+          </div>
+          <button id="btn-clear-data" class="btn btn-danger btn-sm" style="margin-top:8px;">🗑️ 清除資料</button>
+          <button id="btn-refresh-data" class="btn btn-outline btn-sm" style="margin-top:8px; margin-left:6px;">🔄 重新讀取</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 設定彈窗 ===== -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-overlay"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>⚙️ 設定</h2>
+          <button id="btn-close-settings" class="icon-btn">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="api-key">Gemini API Key</label>
+            <div class="input-with-btn">
+              <input type="password" id="api-key" placeholder="AIzaSy...">
+              <button id="btn-toggle-key" class="btn btn-outline btn-sm">👁️</button>
+            </div>
+            <small class="hint">所有 Chrome 帳號共用，只需設定一次</small>
+          </div>
+          <div class="form-group">
+            <label for="ai-model">AI 模型</label>
+            <select id="ai-model">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash（免費、推薦）</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro（品質最好）</option>
+            </select>
+          </div>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid #eee;">
+          <h3 style="font-size:13px; margin-bottom:10px;">帳號名稱</h3>
+          <div class="form-group">
+            <div class="settings-account-row"><span class="account-dot" style="background:#FF6B35;"></span><input type="text" class="account-name-input" data-index="0" placeholder="A 帳號名稱"></div>
+            <div class="settings-account-row"><span class="account-dot" style="background:#00A67E;"></span><input type="text" class="account-name-input" data-index="1" placeholder="B 帳號名稱"></div>
+            <div class="settings-account-row"><span class="account-dot" style="background:#4A90D9;"></span><input type="text" class="account-name-input" data-index="2" placeholder="C 帳號名稱"></div>
+            <div class="settings-account-row"><span class="account-dot" style="background:#9B59B6;"></span><input type="text" class="account-name-input" data-index="3" placeholder="D 帳號名稱"></div>
+            <div class="settings-account-row"><span class="account-dot" style="background:#E74C3C;"></span><input type="text" class="account-name-input" data-index="4" placeholder="E 帳號名稱"></div>
+          </div>
+          <button id="btn-save-settings" class="btn btn-primary btn-full">💾 儲存設定</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/popup.js"></script>
+</body>
+</html>

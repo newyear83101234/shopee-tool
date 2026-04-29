@@ -1,0 +1,22 @@
+# Native Host config（含 Extension ID，每台電腦自己 install.bat 生成）
+native-host/com.shopee.helper.json
+
+# Claude Code 工作資料夾
+.claude/settings.local.json
+
+# 開發者私有檔案
+*.local.json
+.env
+.env.*
+
+# Python 安裝檔（28 MB，員工自備）
+python-*.exe
+
+# 雜物
+網址.txt
+*.zip
+*.crx
+
+# 系統檔
+Thumbs.db
+.DS_Store
